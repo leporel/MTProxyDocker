@@ -1,0 +1,6 @@
+.git
+MTProxy/.git
+MTProxy/objs
+MTProxy/dep
+*.md
+LICENSE
