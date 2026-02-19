@@ -31,10 +31,10 @@ docker logs mtproxy
 
 Output will contain a `tg://proxy?server=...&port=...&secret=...` link ready to use.
 
-Modern Telegram clients require the dd prefix for fake-TLS mode. Your tg:// link should use:
+Modern Telegram clients require the `dd` prefix for random padding to packets or `ee` prefix for fake-TLS mode. Your tg:// link should use:
 `tg://proxy?server=YOUR_IP&port=443&secret=ddSECRET`
 
-The dd prefix tells the client to use fake-TLS transport (makes traffic look like HTTPS). Without it, many networks and ISPs block the plain MTProto protocol.
+The `ee` prefix tells the client to use fake-TLS transport (makes traffic look like HTTPS). Without it, many networks and ISPs block the plain MTProto protocol.
 
 ## Environment Variables
 
