@@ -42,11 +42,12 @@ The `ee` prefix tells the client to use fake-TLS transport (makes traffic look l
 |---|---|---|
 | `SECRET` | auto-generated | Proxy secret (32 hex chars). Comma-separated for multiple secrets |
 | `TAG` | — | Advertisement tag from [@MTProxybot](https://t.me/MTProxybot) |
-| `WORKERS` | `2` | Number of worker processes |
+| `WORKERS` | `0` | Number of worker processes |
 | `PORT` | `443` | Client-facing port |
 | `STATS_PORT` | `2398` | Statistics HTTP port |
 | `EXTERNAL_IP` | auto-detected | Override external IP for NAT |
 | `EPOLL_TIMEOUT` | `50` | Event loop poll interval in ms (1-1000) |
+| `DOMAIN` | — | Domain for TLS-transport (comma-separated for multiple). Disables other transports |
 | `DC_LIMIT` | — | Max IPs per DC in proxy-multi.conf (reduces idle connections, all DCs kept) |
 
 ## Examples
@@ -76,6 +77,36 @@ docker run -d \
   -e WORKERS=4 \
   mtproxy
 ```
+
+## TLS-Transport Mode
+
+TLS-transport makes MTProxy traffic look like regular HTTPS to network observers. When enabled, all non-TLS transports are disabled. The domain must support TLS 1.3.
+
+```bash
+docker run -d \
+  --name mtproxy \
+  --restart unless-stopped \
+  -p 443:443 \
+  -v mtproxy-data:/data \
+  -e DOMAIN=www.google.com \
+  mtproxy
+```
+
+Multiple domains:
+
+```bash
+-e DOMAIN=www.google.com,www.cloudflare.com
+```
+
+The client secret for TLS-transport uses the `ee` prefix format:
+`ee` + `<secret>` + `<domain in hex>`
+
+For example, with secret `00112233445566778899aabbccddeeff` and domain `www.google.com`:
+`ee00112233445566778899aabbccddeeff7777772e676f6f676c652e636f6d`
+
+The startup log prints the ready-to-use `tg://` link with the correct `ee`-prefixed secret.
+
+> **Note:** Using multiple workers (`WORKERS`) with TLS-transport is not recommended for better replay protection. When `DOMAIN` is set, consider leaving `WORKERS` at the default.
 
 ## CPU Usage Tuning
 

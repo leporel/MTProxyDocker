@@ -4,7 +4,11 @@ set -e
 CONFIG_DIR="/data"
 SECRET_FILE="$CONFIG_DIR/secret"
 
-WORKERS="${WORKERS:-2}"
+if [ -n "$WORKERS" ]; then
+    WORKERS_EXPLICIT=1
+else
+    WORKERS=0
+fi
 PORT="${PORT:-443}"
 STATS_PORT="${STATS_PORT:-2398}"
 export EPOLL_TIMEOUT="${EPOLL_TIMEOUT:-50}"
@@ -53,6 +57,21 @@ if [ -n "$TAG" ]; then
     TAG_ARGS="-P $TAG"
 fi
 
+# --- Build -D flags for TLS-transport domains ---
+DOMAIN_ARGS=""
+if [ -n "$DOMAIN" ]; then
+    OLD_IFS="$IFS"
+    IFS=","
+    for d in $DOMAIN; do
+        DOMAIN_ARGS="$DOMAIN_ARGS -D $d"
+    done
+    IFS="$OLD_IFS"
+
+    if [ "${WORKERS_EXPLICIT:-0}" = "1" ]; then
+        echo "WARNING: Using workers with TLS-transport is not recommended for better replay protection."
+    fi
+fi
+
 # --- Build -S flags for secrets (comma-separated support) ---
 SECRET_ARGS=""
 OLD_IFS="$IFS"
@@ -70,11 +89,20 @@ echo "============================================"
 echo "MTProxy is starting"
 echo "Port: $PORT | Workers: $WORKERS | Stats: $STATS_PORT"
 echo "Secret(s): $SECRET"
+if [ -n "$DOMAIN" ]; then
+    echo "TLS-transport: $DOMAIN"
+fi
 if [ -n "$EXTERNAL_IP" ]; then
     OLD_IFS="$IFS"
     IFS=","
     for s in $SECRET; do
-        echo "  tg://proxy?server=${EXTERNAL_IP}&port=${PORT}&secret=${s}"
+        if [ -n "$DOMAIN" ]; then
+            FIRST_DOMAIN=$(echo "$DOMAIN" | cut -d',' -f1)
+            DOMAIN_HEX=$(printf '%s' "$FIRST_DOMAIN" | xxd -p | tr -d '\n')
+            echo "  tg://proxy?server=${EXTERNAL_IP}&port=${PORT}&secret=ee${s}${DOMAIN_HEX}"
+        else
+            echo "  tg://proxy?server=${EXTERNAL_IP}&port=${PORT}&secret=dd${s}"
+        fi
     done
     IFS="$OLD_IFS"
 fi
@@ -90,6 +118,7 @@ exec /usr/local/bin/mtproto-proxy \
     --aes-pwd "$CONFIG_DIR/proxy-secret" \
     $NAT_ARGS \
     $TAG_ARGS \
+    $DOMAIN_ARGS \
     -M "$WORKERS" \
     --http-stats \
     "$CONFIG_DIR/proxy-multi.conf"
