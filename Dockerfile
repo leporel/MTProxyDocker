@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM alpine:3.23 AS builder
+FROM alpine:3.24 AS builder
 
 RUN apk add --no-cache \
     build-base \
@@ -24,7 +24,7 @@ RUN sed -i '/#include <stdlib.h>/a #include "common/musl-compat.h"' jobs/jobs.h 
 RUN make -j"$(nproc)"
 
 # Stage 2: Runtime
-FROM alpine:3.23
+FROM alpine:3.24
 
 RUN apk add --no-cache \
     curl \
